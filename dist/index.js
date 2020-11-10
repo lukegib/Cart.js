@@ -13,7 +13,8 @@ var trainingSet = _mlDatasetIris["default"].getNumbers(); // gets the features
 
 var predictions = _mlDatasetIris["default"].getClasses().map(function (elem) {
   return _mlDatasetIris["default"].getDistinctClasses().indexOf(elem);
-});
+}); //labels
+
 
 var options = {
   gainFunction: 'gini',
