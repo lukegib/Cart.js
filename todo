@@ -1,0 +1,5 @@
+1. Get txt file converted into an array
+2. Be able to separate the file into lables / features / distinct features
+3. Implement the CART algorithm using simple test dataset
+4. Integrate the txt file into the algorithm with comprehensive tests (split (66/33) dataset 10 times and calculate average accuracy)
+5. Slap a front-end on the process

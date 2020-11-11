@@ -20,3 +20,9 @@ const result = classifier.predict(trainingSet);
 const CM2 = ConfusionMatrix.fromLabels(predictions, result)
 
 console.log(CM2.getAccuracy());
+
+console.log(trainingSet);
+
+console.log(predictions);
+
+console.log(irisDataset.getDataset());

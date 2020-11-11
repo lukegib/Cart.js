@@ -28,3 +28,6 @@ var result = classifier.predict(trainingSet);
 var CM2 = _mlConfusionMatrix["default"].fromLabels(predictions, result);
 
 console.log(CM2.getAccuracy());
+console.log(trainingSet);
+console.log(predictions);
+console.log(_mlDatasetIris["default"].getDataset());
