@@ -5,18 +5,21 @@ const labelCol = 4
 let dataArray = []
 let distinctClasses = []
 
-let text = fs.readFileSync('./iris.txt', 'utf-8');
+let text = fs.readFileSync('./iris.txt', 'utf-8')
 let lines = text.split(/\r?\n/)
 let n = lines.length
-console.log(n);
 
 for(let line in lines){
-    dataArray.push(lines[line].split(","))
+    let tokens = lines[line].split(",")
+    const label = tokens.pop() // could have user specify the label column
+    for(let token in tokens){
+        tokens[token] = parseFloat(tokens[token])
+    }
+    tokens.push(label)
+    dataArray.push(tokens)
 }
 
 console.log(dataArray[1].length)
-
-// TODO: need to convert each number from string into a float
 
 // now need to split into classes & numbers
 function getNumbers() {
@@ -24,7 +27,7 @@ function getNumbers() {
 }
 
 function getClasses() {
-    return dataArray.map((d) => d[6]);
+    return dataArray.map((d) => d[6])
 }
 
 function getDistinctClasses() {
@@ -34,7 +37,7 @@ function getDistinctClasses() {
         }
     }
 
-    return distinctClasses;
+    return distinctClasses
 }
 
 console.log(getNumbers())
