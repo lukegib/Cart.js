@@ -1,89 +1,128 @@
-const test_feats = [[4, 8, 12],
-                    [4.3, 10, 12],
-                    [5, 11, 11],
-                    [6.1, 9, 13],
-                    [4.2, 10.3, 11],
-                    [4.5, 9, 11]];
+const full = [[4, 8, 12, 0],
+              [4.3, 10, 12, 0],
+              [5, 11, 11, 1],
+              [6.1, 9, 13, 1],
+              [4.2, 10.3, 11, 2],
+              [4.5, 9, 11, 2]];
 
+const totalFeatures = full[0].length - 1;
+const distinctClasses = [0, 1, 2];
 
-const test_labels = [0, 0, 1, 1, 2, 2]
+// returns the gini index given groups (left, right), the split value
+function getGiniIndex(groups){
 
-// Gini Index - determines where to split
-function giniIndex(splitValue, colIndex, feats, labels){
+    const {left, right} = groups;
+    const total = left.length + right.length;
+    const {leftCount, rightCount} = groups.classes;
+    let score = 0;
+    let gini = {
+        leftScore: 0,
+        rightScore: 0
+    }
+ 
+    // get left score
+    for(let count in leftCount){
+        if(left.length === 0) continue; // avoid dividing by 0
+        const x = leftCount[count] / left.length;
+        score += x * x
+    }
 
-    let row, group;
-    const total = feats.length
-    let split = [[], []]
-    let gini = [];
-    let classCount = [[0, 0, 0], [0, 0, 0]]
+    gini.leftScore = 1 - score;
 
-    // need to initialise classCount ^^^
+    // reset score
+    score = 0;
 
-    // split data into 2 arrays - >=val && < val
-    for(row in feats){
-        const associated_label = labels[row]
+    // get right score
+    for(let count in rightCount){
+        if(right.length === 0) continue;
+        const x = rightCount[count] / right.length;
+        score += x * x;
+    }
 
-        if(feats[row][colIndex] < splitValue){
-            split[0].push(feats[row][colIndex])
-            classCount[0][associated_label] += 1
+    gini.rightScore = 1 - score;
 
+    return (left.length/total) * gini.leftScore + (right.length/total) * gini.rightScore;
+}
+
+// Splits a dataset based on a split value and column number of splitValue
+function splitDataset(dataset, splitValue, columnIndex){
+
+    let left = [];
+    let right = [];
+    let classes = {
+        leftCount: Array.from(Array(distinctClasses.length), () => 0),
+        rightCount: Array.from(Array(distinctClasses.length), () => 0)
+    }
+
+    for(let row in dataset){
+        if(dataset[row][columnIndex] < splitValue){
+            left.push(dataset[row][columnIndex]);
+            classes.leftCount[dataset[row][totalFeatures]] += 1;
         } else {
-            split[1].push(feats[row][colIndex])
-            classCount[1][associated_label] += 1
+            right.push(dataset[row][columnIndex]);
+            classes.rightCount[dataset[row][totalFeatures]] += 1;
         }
     }
 
-    // gini += value * value ... where value is class count / total in group 
-    for(group in split){
-        let score = 0
-
-        for(let value in classCount[group]){
-            if(split[group].length === 0) continue // avoids multi x 0 error
-            const x = classCount[group][value] / split[group].length;
-            score += x * x;
-        }
-
-        gini[group] = 1 - score;  
-    }
-
-    const giniIndex = (split[0].length/total) * gini[0] + (split[1].length/total) * gini[1];
-    
-    return giniIndex;
+    return {left, right, classes}
 }
 
-//iniIndex(5, 0, test_feats, test_labels)
+// returns info on best split - split value, left group, right group
+function getBestSplit(dataset){
+    const features = dataset.map((d) => d.slice(0, totalFeatures));
+    let bestGini = 100;
+    let left = [];
+    let right = [];
+    let splitValue = 100;
 
-// finds best place to split data
-function split(features, labels){
-    let row, feature, i, bestSplit;
-    let bestGini = 1
-
-    const num_of_feats = features[0].length
-
-    // for each feature - 0, 1, 2
-    for(i = 0; i < num_of_feats; i++){
-        // for each row - 0, 1, 2, 3, 4, 5
-        for(row in features){
-            const GI = giniIndex(features[row][i], i, test_feats, test_labels)
-            console.log(`X${i+1} < ${features[row][i]} Gini = ${GI}`)
-            if(GI < bestGini) bestGini = GI; 
+    for(let i=0; i< totalFeatures; i++){
+        for(let row in features){
+            const splitGroup = splitDataset(dataset, features[row][i], i);
+            const gini = getGiniIndex(splitGroup);
+            console.log(`Split @ X < ${features[row][i]}: Gini = ${gini}`);
+            if(gini < bestGini){
+                bestGini = gini;
+                splitValue = features[row][i];
+                left = splitGroup.left;
+                right = splitGroup.right;
+            }
         }
     }
 
-    console.log(bestGini);
-
-    // loop through every feature in dataset
-    // calculate gini index for each features
-    // return the best split point
+    return {bestGini, left, right};
 }
 
-// for each feature value e.g 2, 3, 4
-// calculate the gini index of it e.g x < 2, x < 3, etc.
-// need to calculate gini index of every single value
-// e.g speal_len, speal_wid, etc. etc. can then compare the best split';///////////
+// recursively builds decision tree
+function buildTree(dataset) {
 
+    // split data - returns left/right branch
+    let groups = split(features, labels);
 
-split(test_feats, test_labels);
-// Create Split.
-// Build a Tree.
-// Make a Prediction.
+    // base case
+    // 1. Check if left/true or right/false side is empty!
+    // if so create a leaf node with the groups
+
+    if(groups.left === [] || groups.right === []){
+        // combine groups
+        // get the prediction by calling leaf
+        // set it as both left and right nodes.
+        groups = {
+            left: 0,
+            right: 0
+        }
+        return
+    }
+
+    // process left child
+    buildTree(groups.left) // recursive call
+
+    buildTree(groups.right) // recursive call
+
+}
+
+function leaf(set){
+    // count occurence of each class and return class
+    // with highest count!
+}
+
+//buildTree(full);
