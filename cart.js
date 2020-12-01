@@ -56,10 +56,10 @@ function splitDataset(dataset, splitValue, columnIndex){
 
     for(let row in dataset){
         if(dataset[row][columnIndex] < splitValue){
-            left.push(dataset[row][columnIndex]);
+            left.push(dataset[row]);
             classes.leftCount[dataset[row][totalFeatures]] += 1;
         } else {
-            right.push(dataset[row][columnIndex]);
+            right.push(dataset[row]);
             classes.rightCount[dataset[row][totalFeatures]] += 1;
         }
     }
@@ -78,8 +78,7 @@ function getBestSplit(dataset){
     for(let i=0; i< totalFeatures; i++){
         for(let row in features){
             const splitGroup = splitDataset(dataset, features[row][i], i);
-            const gini = getGiniIndex(splitGroup);
-            console.log(`Split @ X < ${features[row][i]}: Gini = ${gini}`);
+            const gini = getGiniIndex(splitGroup, i);
             if(gini < bestGini){
                 bestGini = gini;
                 splitValue = features[row][i];
@@ -89,35 +88,61 @@ function getBestSplit(dataset){
         }
     }
 
-    return {bestGini, left, right};
+    return {splitValue, left, right};
+}
+
+// Counts occurence of classes to make prediction
+function createLeaf() {
+    let prediction = "TO BE CALCULATED"
+
+    // count up occurences for the classes
+
+    return {prediction}
 }
 
 // recursively builds decision tree
 function buildTree(dataset) {
 
-    // split data - returns left/right branch
-    let groups = split(features, labels);
+    // split data at best point
+    let node = getBestSplit(dataset);
 
+    // If either set is empty make leaf node
+    if(node.left.length === 0 || node.right.length === 0){
+        node = {
+            ...node,
+            left: createLeaf(),
+            right: createLeaf()
+        }
+
+        return node;
+    }
+
+    node.left = buildTree(node.left)
+    node.right = buildTree(node.right)
+
+    return node;
+    
     // base case
     // 1. Check if left/true or right/false side is empty!
     // if so create a leaf node with the groups
-
-    if(groups.left === [] || groups.right === []){
+    /*
+    if(node.left === [] || node.right === []){
         // combine groups
         // get the prediction by calling leaf
         // set it as both left and right nodes.
-        groups = {
-            left: 0,
-            right: 0
+        node = {
+            left: "I'm a leaf!",
+            right: "I'm a leaf!",
         }
         return
     }
 
     // process left child
-    buildTree(groups.left) // recursive call
+    node.left = buildTree(node.left)
 
-    buildTree(groups.right) // recursive call
-
+    // process right child
+    node.right = buildTree(node.right) // recursive call 
+    */
 }
 
 function leaf(set){
@@ -125,4 +150,9 @@ function leaf(set){
     // with highest count!
 }
 
-//buildTree(full);
+function inititateBuild(dataset){
+    let root = buildTree(dataset); // recursive function
+    console.log(root)
+}
+
+inititateBuild(full)
