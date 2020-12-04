@@ -8,6 +8,10 @@ const full = [[4, 8, 12, 0],
 const totalFeatures = full[0].length - 1;
 const distinctClasses = [0, 1, 2];
 
+import fs from 'fs';
+
+
+
 // returns the gini index given groups (left, right), the split value
 function getGiniIndex(groups){
 
@@ -74,6 +78,7 @@ function getBestSplit(dataset){
     let left = [];
     let right = [];
     let splitValue = 100;
+    let splitIndex = 0;
 
     for(let i=0; i< totalFeatures; i++){
         for(let row in features){
@@ -82,77 +87,136 @@ function getBestSplit(dataset){
             if(gini < bestGini){
                 bestGini = gini;
                 splitValue = features[row][i];
+                splitIndex = i;
                 left = splitGroup.left;
                 right = splitGroup.right;
             }
         }
     }
 
-    return {splitValue, left, right};
+    return {splitIndex, splitValue, left, right};
 }
 
 // Counts occurence of classes to make prediction
-function createLeaf() {
-    let prediction = "TO BE CALCULATED"
-
-    // count up occurences for the classes
+function createLeaf(dataset) {
+    const classes = dataset.map((d) => d[totalFeatures]);
+    let prediction;
+    
+    // understand this
+    prediction = classes.sort((a, b) => {
+        classes.filter(v => v===a).length - classes.filter(v => v===b).length
+    }).pop();
 
     return {prediction}
 }
 
+const maxDepth = 5;
+const minNumSamples = 1;
+
 // recursively builds decision tree
-function buildTree(dataset) {
+function buildTree(dataset, treeDepth) {
 
     // split data at best point
     let node = getBestSplit(dataset);
 
     // If either set is empty make leaf node
     if(node.left.length === 0 || node.right.length === 0){
+        const data = node.right.concat(node.left);
+
         node = {
             ...node,
-            left: createLeaf(),
-            right: createLeaf()
+            left: createLeaf(data),
+            right: createLeaf(data)
         }
 
         return node;
     }
 
-    node.left = buildTree(node.left)
-    node.right = buildTree(node.right)
+    // Question of the day ... how do i get the depth!
 
-    return node;
-    
-    // base case
-    // 1. Check if left/true or right/false side is empty!
-    // if so create a leaf node with the groups
-    /*
-    if(node.left === [] || node.right === []){
-        // combine groups
-        // get the prediction by calling leaf
-        // set it as both left and right nodes.
+    //if max-depth is reached maike alead node
+    if(treeDepth >= maxDepth){
+        const leftData = node.left;
+        const rightData = node.right;
+
+        // make leaf nodes
         node = {
-            left: "I'm a leaf!",
-            right: "I'm a leaf!",
+            ...node,
+            left: createLeaf(leftData),
+            right: createLeaf(rightData)
         }
-        return
     }
 
-    // process left child
-    node.left = buildTree(node.left)
+    // if minNumSamples reached, create a leaf node
+    if(node.left.length <= minNumSamples){
+        node.left = createLeaf(node.left);
+    } else {
+        node.left = buildTree(node.left, treeDepth + 1)
+    }
 
-    // process right child
-    node.right = buildTree(node.right) // recursive call 
-    */
-}
+    if(node.right.length <= minNumSamples){
+        node.right = createLeaf(node.right)
+    } else {
+        node.right = buildTree(node.right, treeDepth + 1)
+    }
 
-function leaf(set){
-    // count occurence of each class and return class
-    // with highest count!
+    return node;
 }
 
 function inititateBuild(dataset){
-    let root = buildTree(dataset); // recursive function
-    console.log(root)
+    let root = buildTree(dataset, 1); // recursive function
+    console.log(JSON.stringify(root, null, 4))
+    return root;
 }
 
-inititateBuild(full)
+function stringifyTree(node, spacing){
+
+    if('prediction' in node){
+        console.log(`${spacing}+- Prediction: ${node.prediction}`)
+        spacing += "   ";
+    } else {
+        console.log(`${spacing}+- X${node.splitIndex+1} < ${node.splitValue} ?`);
+        spacing += "|  ";
+        stringifyTree(node.left, spacing)
+        stringifyTree(node.right, spacing)
+    }
+
+    return;
+}
+
+function predict(row, node){
+    // Base case: reached Leaf
+    if('prediction' in node){
+        return node.prediction
+    }
+
+    // Decide whether to go left or right of tree
+    if(row[node.splitIndex] < node.splitValue){
+        return predict(row, node.left)
+    } else {
+        return predict(row, node.right)
+    }
+}
+
+function writePredictionsToFile() {
+    let predictions = ""
+
+    for(let row in full){
+        predictions += `Actual Class: ${full[row][totalFeatures]} Predicted Class: ${predict(full[row], tree)}\n`
+    }
+
+    fs.writeFile('predictions.txt', predictions, (err) => {
+        if(err){
+            console.log(err)
+        }
+        console.log("Successfully written to file")
+    });
+}
+
+const tree = inititateBuild(full)
+
+stringifyTree(tree, "")
+
+writePredictionsToFile()
+
+
