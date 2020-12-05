@@ -12,6 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "@babel/preset-env": "^7.12.1",
+    "chalk": "^4.1.0",
+    "inquirer": "^7.3.3",
     "ml-cart": "^2.0.2",
     "ml-confusion-matrix": "^0.4.0",
     "ml-dataset-iris": "^1.1.1"
