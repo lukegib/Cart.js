@@ -1,23 +1,36 @@
-import fs from 'fs'
-import data from './iris.txt'
+import fs from 'fs';
 
-const labelCol = 4
-let dataArray = []
-let testDataArray = []
-let distinctClasses = []
+let distinctClasses = [];
+let totalColumns = 0;
+let classColumn = 0; 
 
-let text = fs.readFileSync('./iris.txt', 'utf-8')
-let lines = text.split(/\r?\n/)
-let n = lines.length
+function convertFileIntoArray(file){
+    const text = fs.readFileSync(file, 'utf-8')
+    const lines = text.split(/\r?\n/)
 
-for(let line in lines){
-    let tokens = lines[line].split(",")
-    const label = tokens.pop() // could have user specify the label column
-    for(let token in tokens){
-        tokens[token] = parseFloat(tokens[token])
+    let dataArray = [];
+
+    for(let line in lines){
+        let tokens = lines[line].split(",")
+        const label = tokens.pop() // assuming label is last
+        for(let token in tokens){
+            tokens[token] = parseFloat(tokens[token]) // error check this
+        }
+        tokens.push(label.trim())
+        dataArray.push(tokens)
     }
-    tokens.push(label)
-    dataArray.push(tokens)
+
+    return dataArray;
+}
+
+function numberClasses(dataset) {
+    // loop through entire dataset last values
+    for(let row in dataset){
+        const rowClass = dataset[row].pop()
+        dataset[row].push(distinctClasses.indexOf(rowClass))
+    }
+
+    return;
 }
 
 function shuffleRows(array) {
@@ -39,45 +52,72 @@ function shuffleRows(array) {
 }
 
 // randomnly divides a file into test and train data (33/66 split) 
-function splitDataset() {
+function splitDataset(dataset) {
     // get length of dataset
-    let noTrainingRows = Math.round(dataArray.length * 2/3);
-    let noTestRows = dataArray.length - noTrainingRows;
+    let noTrainingRows = Math.round(dataset.length * 2/3);
+    let noTestRows = dataset.length - noTrainingRows;
 
-    dataArray = shuffleRows(dataArray);
+    dataset = shuffleRows(dataset);
 
-    const testData = dataArray.splice(0, noTestRows);
+    const testSet = dataset.splice(0, noTestRows);
 
-    console.log("New dataarray")
-    console.log(dataArray)
-
-    console.log("New test set")
-    console.log(testData)
+    return {
+        trainingSet: dataset,
+        testSet  
+    }
 }
 
 // now need to split into classes & numbers
 function getNumbers() {
-    return dataArray.map((d) => d.slice(0, 6))
+    return dataArray.map((d) => d.slice(0, totalColumns-1))
 }
 
 function getClasses() {
-    return dataArray.map((d) => d[6])
+    return dataArray.map((d) => d[totalColumns-1])
 }
 
-function getDistinctClasses() {
-    for(let row in dataArray) {
-        if(!distinctClasses.includes(dataArray[row][6])){
-            distinctClasses.push(dataArray[row][6])
+function getDistinctClasses(dataset) {
+    for(let row in dataset) {
+        if(!distinctClasses.includes(dataset[row][totalColumns-1])){
+            distinctClasses.push(dataset[row][totalColumns-1])
         }
     }
 
     return distinctClasses
 }
 
-console.log(getNumbers())
+function handleFile(training, test = null){
+    let trainingSet, testSet;
+    let distinctClasses;
 
-console.log(getClasses())
+    if(test === null){
+        let dataArray = convertFileIntoArray(training);
+        totalColumns = dataArray[0].length;
+        distinctClasses = getDistinctClasses(dataArray)
+        numberClasses(dataArray);
 
-console.log(getDistinctClasses())
+        const datasets = splitDataset(dataArray);
+        trainingSet = datasets.trainingSet;
+        testSet = datasets.testSet;
+    } else {
+        trainingSet = convertFileIntoArray(training);
+        testSet = convertFileIntoArray(test);
+        totalColumns = dataArray[0].length;
+        distinctClasses = getDistinctClasses(trainingSet.concat(testSet));
+        numberClasses(trainingSet);
+        numberClasses(testSet);
+    }
 
-splitDataset()
+    return {
+        trainingSet,
+        testSet,
+        distinctClasses,
+    }
+}
+
+module.exports = {
+    handleFile,
+    getNumbers,
+    getClasses
+}
+
