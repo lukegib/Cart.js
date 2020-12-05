@@ -1,16 +1,9 @@
-const full = [[4, 8, 12, 0],
-              [4.3, 10, 12, 0],
-              [5, 11, 11, 1],
-              [6.1, 9, 13, 1],
-              [4.2, 10.3, 11, 2],
-              [4.5, 9, 11, 2]];
-
-const totalFeatures = full[0].length - 1;
-const distinctClasses = [0, 1, 2];
-
 import fs from 'fs';
 
-
+let maxDepth = 5;
+let minNumSamples = 1;
+let totalFeatures = 0;
+let distinctClasses = []; // only really need the length
 
 // returns the gini index given groups (left, right), the split value
 function getGiniIndex(groups){
@@ -80,7 +73,8 @@ function getBestSplit(dataset){
     let splitValue = 100;
     let splitIndex = 0;
 
-    for(let i=0; i< totalFeatures; i++){
+    // Take a look at this -- should it be i<=totalFeats ?
+    for(let i=0; i < totalFeatures; i++){
         for(let row in features){
             const splitGroup = splitDataset(dataset, features[row][i], i);
             const gini = getGiniIndex(splitGroup, i);
@@ -109,9 +103,6 @@ function createLeaf(dataset) {
 
     return {prediction}
 }
-
-const maxDepth = 5;
-const minNumSamples = 1;
 
 // recursively builds decision tree
 function buildTree(dataset, treeDepth) {
@@ -163,13 +154,17 @@ function buildTree(dataset, treeDepth) {
     return node;
 }
 
-function inititateBuild(dataset){
-    let root = buildTree(dataset, 1); // recursive function
-    console.log(JSON.stringify(root, null, 4))
-    return root;
+function initiateBuild(data, options){
+    distinctClasses = data.distinctClasses;
+    maxDepth = options.maxDepth;
+    minNumSamples = options.minNumSamples;
+    totalFeatures = data.trainingSet[0].length - 1;
+
+    let tree = buildTree(data.trainingSet, 1);
+    return tree;
 }
 
-function stringifyTree(node, spacing){
+function printTree(node, spacing=""){
 
     if('prediction' in node){
         console.log(`${spacing}+- Prediction: ${node.prediction}`)
@@ -177,8 +172,8 @@ function stringifyTree(node, spacing){
     } else {
         console.log(`${spacing}+- X${node.splitIndex+1} < ${node.splitValue} ?`);
         spacing += "|  ";
-        stringifyTree(node.left, spacing)
-        stringifyTree(node.right, spacing)
+        printTree(node.left, spacing)
+        printTree(node.right, spacing)
     }
 
     return;
@@ -198,14 +193,33 @@ function predict(row, node){
     }
 }
 
-function writePredictionsToFile() {
-    let predictions = ""
-
-    for(let row in full){
-        predictions += `Actual Class: ${full[row][totalFeatures]} Predicted Class: ${predict(full[row], tree)}\n`
+function getPredictions(dataset, tree){
+    let predictions = {
+        actual: [],
+        predicted: []
     }
 
-    fs.writeFile('predictions.txt', predictions, (err) => {
+    for(let row in dataset){
+        const actualValue = dataset[row][totalFeatures];
+        const predictedValue = predict(dataset[row], tree);
+        predictions.actual.push(actualValue);
+        predictions.predicted.push(predictedValue);
+    }
+
+    return predictions;
+}
+
+function writePredictionsToFile(dataset, tree, distinctClasses) {
+    const predictions = getPredictions(dataset, tree);
+    
+    let fileContents = "";
+
+    for(let value in predictions.predicted){
+        fileContents += `Actual Class: ${distinctClasses[predictions.actual[value]]} Predicted Class: ${distinctClasses[predictions.predicted[value]]}\n`
+        // distinctClasses conatisn actual names
+    }
+
+    fs.writeFile('predictions.txt', fileContents, (err) => {
         if(err){
             console.log(err)
         }
@@ -213,10 +227,35 @@ function writePredictionsToFile() {
     });
 }
 
-const tree = inititateBuild(full)
+// Returns the accuracy and confusionMatrix
+function getStatistics(dataset, tree){
 
-stringifyTree(tree, "")
+    const {actual, predicted} = getPredictions(dataset, tree);
+    const numClasses = distinctClasses.length;
+    let confusionMatrix = [...Array(numClasses)].map(e => Array(numClasses).fill(0));
+    let accuracy = [];
+    let totalPredictions = 0;
+    let correctPredictions = 0;
 
-writePredictionsToFile()
+    for(let value in predicted){
+        confusionMatrix[actual[value]][predicted[value]] += 1;
+        totalPredictions += 1;
+        if(actual[value] === predicted[value]) correctPredictions += 1;
+    }
+
+    accuracy = correctPredictions / totalPredictions * 100
+
+    return {
+        confusionMatrix,
+        accuracy
+    }    
+}
+
+module.exports = {
+    initiateBuild,
+    printTree,
+    writePredictionsToFile,
+    getStatistics
+}
 
 
