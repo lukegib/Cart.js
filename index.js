@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import {handleFile} from './fileHandling';
 import compare from './compare';
-import {initiateBuild, printTree, writePredictionsToFile, getStatistics} from './cart';
+import Cart from './cart';
 
 const log = console.log;
 
@@ -63,7 +63,7 @@ const fileQuestions = [
     },
     {
         type: 'input',
-        name: 'est',
+        name: 'test',
         message: 'Input test set location: ',
     },
 ]
@@ -72,7 +72,8 @@ let options = {
     maxDepth: 5,
     minNumSamples: 1
 }
-let inputTrainingSet = false;
+let inputTestSet = false;
+let trainingFile = '';
 
 
 async function setUp(){
@@ -80,18 +81,17 @@ async function setUp(){
 
     options.maxDepth = answers.depth;
     options.minNumSamples = answers.minSampleSize;
-    inputTrainingSet = answers.inputType.includes('Test');
+    inputTestSet = answers.inputType.includes('Test');
 
-    if(inputTrainingSet){
+    if(inputTestSet){
         const {training, test} = await inquirer.prompt(fileQuestions);
-        // handle files here
         const data = handleFile(training, test);
-        return data
+        return data;
     } else {
         const {training} = await inquirer.prompt(fileQuestions[0]);
-        // handle file here
         const data = handleFile(training);
-        return data
+        trainingFile = training;
+        return data;
     }
 }
 
@@ -99,7 +99,10 @@ async function start(){
     log(chalk.magentaBright.bold('\nWelcome to CART.js\n'))
 
     const data = await setUp();
-    const tree = initiateBuild(data, options);
+
+    let tree = new Cart(data, options);
+
+    //const tree = initiateBuild(data, options);
     log(chalk.green.bold('\nYour tree has been built!\n'));
 
     let exit = false;
@@ -108,29 +111,37 @@ async function start(){
         const answer = await inquirer.prompt(postBuildQuestions);
 
         if(answer.option.includes('Print')){
-            printTree(tree)
+            tree.printTree()
         }
         else if(answer.option.includes('Write')){
-            writePredictionsToFile(data.testSet, tree, data.distinctClasses)
+            tree.writePredictionsToFile()
         }
         else if(answer.option.includes('Compare')){
 
-            const stats = getStatistics(data.testSet, tree);
+            const stats = tree.getStatistics();
 
             log(`Matrix: ${stats.confusionMatrix}`)
             log(`Accuracy: ${stats.accuracy}%`)
 
+            const compareStats = compare(data, options);
+
+            log("Matrix: ")
+            log(compareStats.confusionMatrix)
+            log(`Accuracy: ${compareStats.accuracy}`)
         }
         else if(answer.option.includes('Rebuild')){
-            // new tree creation
-            // no need for new distinctClass retireval
+            if(inputTestSet){
+                log(chalk.red('Sorry, you can\'t perform this action as you have entered a separate test dataset.'))
+            } else {
+                const newData = handleFile(trainingFile);
+                tree = new Cart(newData, options);
+                log(chalk.green('A new tree has been built successfully!'))
+            }
         }
         else{
             exit = true;
         }
     }    
 }
-
-// TODO: Only 2 predictions for 4 test cases ?!
 
 start();
