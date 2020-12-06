@@ -1,24 +1,23 @@
 import fs from 'fs';
 
-let distinctClasses = [];
 let totalColumns = 0;
-let classColumn = 0; 
+const distinctClasses = [];
 
-function convertFileIntoArray(file){
-    const text = fs.readFileSync(file, 'utf-8')
-    const lines = text.split(/\r?\n/)
+function convertFileIntoArray(file) {
+    const text = fs.readFileSync(file, 'utf-8');
+    const lines = text.split(/\r?\n/);
 
-    let dataArray = [];
+    const dataArray = [];
 
-    for(let line in lines){
-        let tokens = lines[line].split(",")
-        const label = tokens.pop() // assuming label is last
-        for(let token in tokens){
-            tokens[token] = parseFloat(tokens[token]) // error check this
-        }
-        tokens.push(label.trim())
-        dataArray.push(tokens)
-    }
+    Object.values(lines).forEach((line) => {
+        let tokens = line.split(',');
+        const label = tokens.pop();
+
+        tokens = Object.values(tokens).map((token) => parseFloat(token));
+
+        tokens.push(label.trim());
+        dataArray.push(tokens);
+    });
 
     return dataArray;
 }
@@ -34,10 +33,12 @@ function numberClasses(dataset) {
 }
 
 function shuffleRows(array) {
-    let currentIndex = array.length, temporaryValue, randomIndex;
+    let currentIndex = array.length;
+    let temporaryValue;
+    let randomIndex;
 
     // while elements remain to be shuffled
-    while( 0 !== currentIndex){
+    while (currentIndex !== 0) {
         // Pick remaining element ...
         randomIndex = Math.floor(Math.random() * currentIndex);
         currentIndex -= 1;
@@ -51,11 +52,10 @@ function shuffleRows(array) {
     return array;
 }
 
-// randomnly divides a file into test and train data (33/66 split) 
+// randomnly divides a file into test and train data (33/66 split)
 function splitDataset(dataset) {
-    // get length of dataset
-    let noTrainingRows = Math.round(dataset.length * 2/3);
-    let noTestRows = dataset.length - noTrainingRows;
+    const noTrainingRows = Math.round(dataset.length * (2 / 3));
+    const noTestRows = dataset.length - noTrainingRows;
 
     dataset = shuffleRows(dataset);
 
@@ -63,19 +63,19 @@ function splitDataset(dataset) {
 
     return {
         trainingSet: dataset,
-        testSet  
-    }
+        testSet,
+    };
 }
 
 // now need to split into classes & numbers
 function getNumbers(dataArray) {
-    const totalColumns = dataArray[0].length;
-    return dataArray.map((d) => d.slice(0, totalColumns-1))
+    const totalCols = dataArray[0].length;
+    return dataArray.map((d) => d.slice(0, totalCols - 1));
 }
 
 function getClasses(dataArray) {
-    const totalColumns = dataArray[0].length;
-    return dataArray.map((d) => d[totalColumns-1])
+    const totalCols = dataArray[0].length;
+    return dataArray.map((d) => d[totalCols - 1]);
 }
 
 function getDistinctClasses(dataset) {
@@ -85,25 +85,24 @@ function getDistinctClasses(dataset) {
         }
     }
 
-    return distinctClasses
+    return distinctClasses;
 }
 
-function handleFile(training, test = null){
-    let trainingSet, testSet;
+function handleFile(training, test = null) {
+    let trainingSet;
+    let testSet;
     let distinctClasses;
 
-    if(test === null){
-        console.log("You are using 1 file - only train")
-        let dataArray = convertFileIntoArray(training);
+    if (test === null) {
+        const dataArray = convertFileIntoArray(training);
         totalColumns = dataArray[0].length;
-        distinctClasses = getDistinctClasses(dataArray)
+        distinctClasses = getDistinctClasses(dataArray);
         numberClasses(dataArray);
 
         const datasets = splitDataset(dataArray);
         trainingSet = datasets.trainingSet;
         testSet = datasets.testSet;
     } else {
-        console.log("You are using 2 files - test & train")
         trainingSet = convertFileIntoArray(training);
         testSet = convertFileIntoArray(test);
         totalColumns = trainingSet[0].length;
@@ -116,12 +115,11 @@ function handleFile(training, test = null){
         trainingSet,
         testSet,
         distinctClasses,
-    }
+    };
 }
 
 module.exports = {
     handleFile,
     getNumbers,
-    getClasses
-}
-
+    getClasses,
+};
