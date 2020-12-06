@@ -68,11 +68,13 @@ function splitDataset(dataset) {
 }
 
 // now need to split into classes & numbers
-function getNumbers() {
+function getNumbers(dataArray) {
+    const totalColumns = dataArray[0].length;
     return dataArray.map((d) => d.slice(0, totalColumns-1))
 }
 
-function getClasses() {
+function getClasses(dataArray) {
+    const totalColumns = dataArray[0].length;
     return dataArray.map((d) => d[totalColumns-1])
 }
 
@@ -91,6 +93,7 @@ function handleFile(training, test = null){
     let distinctClasses;
 
     if(test === null){
+        console.log("You are using 1 file - only train")
         let dataArray = convertFileIntoArray(training);
         totalColumns = dataArray[0].length;
         distinctClasses = getDistinctClasses(dataArray)
@@ -100,9 +103,10 @@ function handleFile(training, test = null){
         trainingSet = datasets.trainingSet;
         testSet = datasets.testSet;
     } else {
+        console.log("You are using 2 files - test & train")
         trainingSet = convertFileIntoArray(training);
         testSet = convertFileIntoArray(test);
-        totalColumns = dataArray[0].length;
+        totalColumns = trainingSet[0].length;
         distinctClasses = getDistinctClasses(trainingSet.concat(testSet));
         numberClasses(trainingSet);
         numberClasses(testSet);
