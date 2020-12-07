@@ -24,12 +24,10 @@ function convertFileIntoArray(file) {
 
 function numberClasses(dataset) {
     // loop through entire dataset last values
-    for(let row in dataset){
-        const rowClass = dataset[row].pop()
-        dataset[row].push(distinctClasses.indexOf(rowClass))
-    }
-
-    return;
+    Object.values(dataset).forEach((row) => {
+        const rowClass = row.pop();
+        row.push(distinctClasses.indexOf(rowClass));
+    });
 }
 
 function shuffleRows(array) {
@@ -79,11 +77,11 @@ function getClasses(dataArray) {
 }
 
 function getDistinctClasses(dataset) {
-    for(let row in dataset) {
-        if(!distinctClasses.includes(dataset[row][totalColumns-1])){
-            distinctClasses.push(dataset[row][totalColumns-1])
+    Object.values(dataset).forEach((row) => {
+        if (!distinctClasses.includes(row[totalColumns - 1])) {
+            distinctClasses.push(row[totalColumns - 1]);
         }
-    }
+    });
 
     return distinctClasses;
 }
@@ -91,12 +89,12 @@ function getDistinctClasses(dataset) {
 function handleFile(training, test = null) {
     let trainingSet;
     let testSet;
-    let distinctClasses;
+    let classes;
 
     if (test === null) {
         const dataArray = convertFileIntoArray(training);
         totalColumns = dataArray[0].length;
-        distinctClasses = getDistinctClasses(dataArray);
+        classes = getDistinctClasses(dataArray);
         numberClasses(dataArray);
 
         const datasets = splitDataset(dataArray);
@@ -106,7 +104,7 @@ function handleFile(training, test = null) {
         trainingSet = convertFileIntoArray(training);
         testSet = convertFileIntoArray(test);
         totalColumns = trainingSet[0].length;
-        distinctClasses = getDistinctClasses(trainingSet.concat(testSet));
+        classes = getDistinctClasses(trainingSet.concat(testSet));
         numberClasses(trainingSet);
         numberClasses(testSet);
     }
@@ -114,7 +112,7 @@ function handleFile(training, test = null) {
     return {
         trainingSet,
         testSet,
-        distinctClasses,
+        distinctClasses: classes,
     };
 }
 

@@ -1,11 +1,9 @@
-// Questions to ask user - tree options, input files, options after tree is built
-
 const preBuildQuestions = [
     {
         type: 'list',
         name: 'inputType',
         message: 'Do you want to input:',
-        choices: ['A Training and Test Dataset', 'Just a Training Set']
+        choices: ['A Training and Test Dataset', 'Just a Training Set'],
     },
     {
         type: 'input',

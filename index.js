@@ -22,7 +22,7 @@ async function setUp() {
     inputTestSet = answers.inputType.includes('Test');
 
     if (inputTestSet) {
-        const {training, test} = await inquirer.prompt(fileQuestions);
+        const { training, test } = await inquirer.prompt(fileQuestions);
         const data = handleFile(training, test);
         return data;
     }
@@ -37,7 +37,7 @@ async function setUp() {
 async function start() {
     log(chalk.magentaBright.bold('\nWelcome to CART.js\n'));
 
-    const data = await setUp();
+    let data = await setUp();
 
     let tree = new Cart(data, options);
 
@@ -46,6 +46,7 @@ async function start() {
     let exit = false;
 
     while (!exit) {
+        // eslint-disable-next-line no-await-in-loop
         const answer = await inquirer.prompt(postBuildQuestions);
 
         if (answer.option.includes('Print')) {
@@ -58,18 +59,20 @@ async function start() {
             log(`Matrix: ${stats.confusionMatrix}`);
             log(`Accuracy: ${stats.accuracy}%`);
 
+            // mayb
+
             const compareStats = compare(data, options);
 
             log('Matrix: ');
             log(compareStats.confusionMatrix);
             log(`Accuracy: ${compareStats.accuracy}`);
-        }
-        else if (answer.option.includes('Rebuild')) {
+        } else if (answer.option.includes('Rebuild')) {
             if (inputTestSet) {
                 log(chalk.red('Sorry, you can\'t perform this action as you have entered a separate test dataset.'));
             } else {
                 const newData = handleFile(trainingFile);
-                tree = new Cart(newData, options);
+                data = newData;
+                tree = new Cart(data, options);
                 log(chalk.green('A new tree has been successfully built!'));
             }
         } else {

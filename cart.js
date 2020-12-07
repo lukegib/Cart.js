@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import fs from 'fs';
 
+const { log } = console;
+
 export default class Cart {
     constructor({ trainingSet, testSet, distinctClasses }, { maxDepth, minNumSamples }) {
         // initializse everything and build the tree
@@ -25,7 +27,7 @@ export default class Cart {
         let node = this.getBestSplit(dataset);
 
         // If either set is empty make leaf node
-        if(node.left.length === 0 || node.right.length === 0) {
+        if (node.left.length === 0 || node.right.length === 0) {
             const data = node.right.concat(node.left);
 
             node = {
@@ -49,7 +51,7 @@ export default class Cart {
                 ...node,
                 left: this.createLeaf(leftData),
                 right: this.createLeaf(rightData),
-            }
+            };
         }
 
         // if minNumSamples reached, create a leaf node
@@ -78,13 +80,13 @@ export default class Cart {
         let splitIndex = 0;
 
         // Take a look at this -- should it be i<=totalFeats ?
-        for (let i = 0; i < this.totalFeatures; i++) {
-            for(let row in features){
-                const splitGroup = this.splitDataset(dataset, features[row][i], i);
+        for (let i = 0; i < this.totalFeatures; i += 1) {
+            for (let j = 0; j < features.length; j += 1) {
+                const splitGroup = this.splitDataset(dataset, features[j][i], i);
                 const gini = this.getGiniIndex(splitGroup, i);
-                if(gini < bestGini){
+                if (gini < bestGini) {
                     bestGini = gini;
-                    splitValue = features[row][i];
+                    splitValue = features[j][i];
                     splitIndex = i;
                     left = splitGroup.left;
                     right = splitGroup.right;
@@ -107,37 +109,37 @@ export default class Cart {
         const classes = {
             leftCount: Array.from(Array(this.distinctClasses.length), () => 0),
             rightCount: Array.from(Array(this.distinctClasses.length), () => 0),
-        }
+        };
 
-        for(let row in dataset){
-            if(dataset[row][columnIndex] < splitValue){
-                left.push(dataset[row]);
-                classes.leftCount[dataset[row][this.totalFeatures]] += 1;
+        Object.values(dataset).forEach((row) => {
+            if (row[columnIndex] < splitValue) {
+                left.push(row);
+                classes.leftCount[row[this.totalFeatures]] += 1;
             } else {
-                right.push(dataset[row]);
-                classes.rightCount[dataset[row][this.totalFeatures]] += 1;
+                right.push(row);
+                classes.rightCount[row[this.totalFeatures]] += 1;
             }
-        }
+        });
 
-        return {left, right, classes}
+        return { left, right, classes };
     }
 
     // returns the gini index given groups (left, right), the split value
     getGiniIndex(groups) {
-        const {left, right} = groups;
+        const { left, right } = groups;
         const total = left.length + right.length;
-        const {leftCount, rightCount} = groups.classes;
+        const { leftCount, rightCount } = groups.classes;
         let score = 0;
-        let gini = {
+        const gini = {
             leftScore: 0,
-            rightScore: 0
-        }
-    
+            rightScore: 0,
+        };
+
         // get left score
-        for(let count in leftCount){
-            if(left.length === 0) continue; // avoid dividing by 0
-            const x = leftCount[count] / left.length;
-            score += x * x
+        for (let i = 0; i < leftCount.length; i += 1) {
+            if (left.length === 0) continue; // avoid dividing by 0
+            const x = leftCount[i] / left.length;
+            score += x * x;
         }
 
         gini.leftScore = 1 - score;
@@ -146,15 +148,15 @@ export default class Cart {
         score = 0;
 
         // get right score
-        for(let count in rightCount){
-            if(right.length === 0) continue;
-            const x = rightCount[count] / right.length;
+        for (let i = 0; i < rightCount.length; i += 1) {
+            if (right.length === 0) continue;
+            const x = rightCount[i] / right.length;
             score += x * x;
         }
 
         gini.rightScore = 1 - score;
 
-        return (left.length/total) * gini.leftScore + (right.length/total) * gini.rightScore;
+        return (left.length / total) * gini.leftScore + (right.length / total) * gini.rightScore;
     }
 
     // Counts occurence of classes to make prediction
@@ -162,7 +164,10 @@ export default class Cart {
         const classes = dataset.map((d) => d[this.totalFeatures]);
 
         const prediction = classes.sort((a, b) => {
-            classes.filter(v => v===a).length - classes.filter(v => v===b).length
+            const x = classes.filter((v) => v === a).length;
+            const y = classes.filter((v) => v === b).length;
+            return x - y;
+            // classes.filter(v => v===a).length - classes.filter(v => v===b).length
         }).pop();
 
         return { prediction };
@@ -170,12 +175,12 @@ export default class Cart {
 
     printTree(node = this.tree, spacing = '', color = 'green') {
         if ('prediction' in node) {
-            console.log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
-            console.log(`${spacing}+- Prediction: ${node.prediction}`);
+            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
+            log(`${spacing}+- Prediction: ${node.prediction}`);
             spacing += '   ';
         } else {
-            console.log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
-            console.log(`${spacing}+- Is X${node.splitIndex + 1} < ${node.splitValue} ?`);
+            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
+            log(`${spacing}+- Is X${node.splitIndex + 1} < ${node.splitValue} ?`);
             spacing += '|  ';
             this.printTree(node.left, spacing, 'green');
             this.printTree(node.right, spacing, 'red');
@@ -188,13 +193,13 @@ export default class Cart {
             predicted: [],
         };
 
-        for(let row in this.testSet){
-            const actualValue = this.testSet[row][this.totalFeatures];
-            const predictedValue = this.predict(this.testSet[row], this.tree);
+        Object.values(this.testSet).forEach((row) => {
+            const actualValue = row[this.totalFeatures];
+            const predictedValue = this.predict(row, this.tree);
             predictions.actual.push(actualValue);
             predictions.predicted.push(predictedValue);
-        }
-    
+        });
+
         return predictions;
     }
 
@@ -213,20 +218,19 @@ export default class Cart {
     }
 
     async writePredictionsToFile() {
-        const predictions = this.getPredictions();
+        const { actual, predicted } = this.getPredictions();
 
         let fileContents = '';
 
-        for(let value in predictions.predicted){
-            fileContents += `Actual Class: ${this.distinctClasses[predictions.actual[value]]} Predicted Class: ${this.distinctClasses[predictions.predicted[value]]}\n`
-            // distinctClasses conatisn actual names
+        for (let i = 0; i < actual.length; i += 1) {
+            fileContents += `Actual Class: ${this.distinctClasses[actual[i]]} Predicted Class: ${this.distinctClasses[predicted[i]]}\n`;
         }
 
         fs.writeFile('predictions.txt', fileContents, (err) => {
             if (err) {
-                console.log(err);
+                log(err);
             }
-            console.log('Successfully written to file');
+            log('Successfully written to file');
         });
     }
 
@@ -239,10 +243,10 @@ export default class Cart {
         let totalPredictions = 0;
         let correctPredictions = 0;
 
-        for(let value in predicted){
-            confusionMatrix[actual[value]][predicted[value]] += 1;
+        for (let i = 0; i < actual.length; i += 1) {
+            confusionMatrix[actual[i]][predicted[i]] += 1;
             totalPredictions += 1;
-            if(actual[value] === predicted[value]) correctPredictions += 1;
+            if (actual[i] === predicted[i]) correctPredictions += 1;
         }
 
         accuracy = (correctPredictions / totalPredictions) * 100;
