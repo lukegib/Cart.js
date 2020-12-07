@@ -20,7 +20,7 @@ async function setUp() {
 
     options.maxDepth = answers.depth;
     options.minNumSamples = answers.minSampleSize;
-    inputTestSet = answers.inputType.includes('Test');
+    inputTestSet = answers.inputType.includes('test');
 
     // If using a test set, get both training and test file locations + handle the files
     if (inputTestSet) {
@@ -40,6 +40,7 @@ async function setUp() {
 // Starts the application
 async function start() {
     log(chalk.magentaBright.bold('\nWelcome to CART.js\n'));
+    log(chalk.cyan.bold("Let's set up your tree:"));
 
     // Get CART data
     let data = await setUp();
@@ -58,34 +59,40 @@ async function start() {
 
         // User can print, write, compare, rebuild and exit the application
         if (answer.option.includes('Print')) {
+            log('\n');
             tree.printTree();
+            log('\n');
         } else if (answer.option.includes('Write')) {
-            tree.writePredictionsToFile();
+            // eslint-disable-next-line no-await-in-loop
+            await tree.writePredictionsToFile();
         } else if (answer.option.includes('Compare')) {
-            // Get tree stats
+            // Get this trees statistics
             const stats = tree.getStatistics();
 
-            log(`Matrix: ${stats.confusionMatrix}`);
-            log(`Accuracy: ${stats.accuracy}%`);
-
-            // get compareStats
+            log(chalk.cyan.bold('\nThis tree:\n'));
+            log(chalk`{bold Accuracy:} ${stats.accuracy}%\n`);
+            log(chalk.bold('Confusion Matrix:\n'));
+            log(`Labels: ${data.distinctClasses}\n`);
+            log(stats.confusionMatrix);
 
             const compareStats = compare(data, options);
 
-            log('Matrix: ');
-            log(compareStats.confusionMatrix);
-            log(`Accuracy: ${compareStats.accuracy}`);
+            log(chalk.cyan.bold('\nml-cart tree:\n'));
+            log(chalk`{bold Accuracy:} ${compareStats.accuracy}%\n`);
+            log(chalk.bold('Confusion Matrix:\n'));
+            log(`Labels: ${compareStats.confusionMatrix.labels}\n`);
+            log(compareStats.confusionMatrix.matrix);
+            log('\n');
         } else if (answer.option.includes('Rebuild')) {
             // If using a test set then can't rebuild
             if (inputTestSet) {
-                log(chalk.red('Sorry, you can\'t perform this action as you have entered a separate test dataset.'));
+                log(chalk.red.bold('\nYou can\'t perform this action as a separate test set was entered!\n'));
             } else {
                 // Call handleFile to get new training/test split
-                const newData = handleFile(trainingFile);
-                data = newData;
+                data = handleFile(trainingFile);
                 // Create a new tree using the new split datasets
                 tree = new Cart(data, options);
-                log(chalk.green('A new tree has been successfully built!'));
+                log(chalk.green.bold('\nYour new tree has been built!\n'));
             }
         } else {
             // Exit the application

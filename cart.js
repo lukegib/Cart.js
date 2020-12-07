@@ -179,13 +179,23 @@ export default class Cart {
     }
 
     // Prints the tree to the console
-    printTree(node = this.tree, spacing = '', color = 'green') {
+    printTree(node = this.tree, spacing = '', color = 'yellow') {
+        let label;
+
+        if (color === 'yellow') {
+            label = chalk.yellow.bold('+- Root:');
+        } else if (color === 'green') {
+            label = chalk.green.bold('+- Yes:');
+        } else {
+            label = chalk.red.bold('+- No:');
+        }
+
         if ('prediction' in node) {
-            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:') : chalk.red.bold('+- No:')}`);
+            log(`${spacing}${label}`);
             log(`${spacing}+- Prediction: ${node.prediction}`);
             spacing += '   ';
         } else {
-            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:') : chalk.red.bold('+- No:')}`);
+            log(`${spacing}${label}`);
             log(`${spacing}+- Is X${node.splitIndex + 1} < ${node.splitValue} ?`);
             spacing += '|  ';
             this.printTree(node.left, spacing, 'green');
@@ -236,12 +246,12 @@ export default class Cart {
             fileContents += `Actual Class: ${this.distinctClasses[actual[i]]} Predicted Class: ${this.distinctClasses[predicted[i]]}\n`;
         }
 
-        fs.writeFile('predictions.txt', fileContents, (err) => {
-            if (err) {
-                log(err);
-            }
-            log('Successfully written to file');
-        });
+        try {
+            await fs.promises.writeFile('predictions.txt', fileContents);
+            log(chalk.green.bold('\nSuccessfully written to predictions.txt\n'));
+        } catch (err) {
+            log(chalk.red.bold(`\n${err}\n`));
+        }
     }
 
     // Return the accuracy and confusion matrix of predictions

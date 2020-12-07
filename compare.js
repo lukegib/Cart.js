@@ -15,7 +15,7 @@ function compare({ trainingSet, testSet }, options) {
     const CM2 = ConfusionMatrix.fromLabels(getClasses(testSet), result);
 
     return {
-        accuracy: CM2.getAccuracy(),
+        accuracy: CM2.getAccuracy() * 100,
         confusionMatrix: CM2,
     };
 }
