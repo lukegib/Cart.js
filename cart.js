@@ -1,3 +1,5 @@
+/* eslint-disable no-param-reassign */
+/* eslint-disable no-continue */
 import chalk from 'chalk';
 import fs from 'fs';
 
@@ -16,17 +18,17 @@ export default class Cart {
         this.tree = this.initiateBuild();
     }
 
+    // Start building the tree from root
     initiateBuild() {
         const tree = this.buildTree(this.trainingSet, 1);
         return tree;
     }
 
-    // recursively builds decision tree
+    // Recursively builds the decision tree
     buildTree(dataset, treeDepth) {
-        // split data at best point
         let node = this.getBestSplit(dataset);
 
-        // If either set is empty make leaf node
+        // If either set is empty create a leaf on both sides
         if (node.left.length === 0 || node.right.length === 0) {
             const data = node.right.concat(node.left);
 
@@ -39,14 +41,11 @@ export default class Cart {
             return node;
         }
 
-        // Question of the day ... how do i get the depth!
-
-        // if max-depth is reached maike alead node
+        // if max depth is reached, create a leaf on both sides
         if (treeDepth >= this.maxDepth) {
             const leftData = node.left;
             const rightData = node.right;
 
-            // make leaf nodes
             node = {
                 ...node,
                 left: this.createLeaf(leftData),
@@ -54,23 +53,26 @@ export default class Cart {
             };
         }
 
-        // if minNumSamples reached, create a leaf node
+        // if minimum number of samples is reached on the left, create a leaf...
         if (node.left.length <= this.minNumSamples) {
             node.left = this.createLeaf(node.left);
         } else {
+            // ... else recursively build the left side of the tree
             node.left = this.buildTree(node.left, treeDepth + 1);
         }
 
+        // if minimum number of samples is reached on the right, create a leaf...
         if (node.right.length <= this.minNumSamples) {
             node.right = this.createLeaf(node.right);
         } else {
+            // ... else recursively build the right side of the tree
             node.right = this.buildTree(node.right, treeDepth + 1);
         }
 
         return node;
     }
 
-    // returns info on best split - split value, left group, right group
+    // Returns the best split point information - index, value, left data, right data
     getBestSplit(dataset) {
         const features = dataset.map((d) => d.slice(0, this.totalFeatures));
         let bestGini = 100;
@@ -79,11 +81,14 @@ export default class Cart {
         let splitValue = 100;
         let splitIndex = 0;
 
-        // Take a look at this -- should it be i<=totalFeats ?
+        // Loop thorugh each feature at each row
         for (let i = 0; i < this.totalFeatures; i += 1) {
             for (let j = 0; j < features.length; j += 1) {
+                // split the dataset at this point
                 const splitGroup = this.splitDataset(dataset, features[j][i], i);
+                // Retrieve and compare the Gini Index
                 const gini = this.getGiniIndex(splitGroup, i);
+                // A lower Gini Index === best place to split
                 if (gini < bestGini) {
                     bestGini = gini;
                     splitValue = features[j][i];
@@ -102,7 +107,7 @@ export default class Cart {
         };
     }
 
-    // Splits a dataset based on a split value and column number of splitValue
+    // Divides a dataset into two (left, right) based on a split value
     splitDataset(dataset, splitValue, columnIndex) {
         const left = [];
         const right = [];
@@ -124,7 +129,7 @@ export default class Cart {
         return { left, right, classes };
     }
 
-    // returns the gini index given groups (left, right), the split value
+    // Calaculates and returns the Gini Index of two groups (left and right)
     getGiniIndex(groups) {
         const { left, right } = groups;
         const total = left.length + right.length;
@@ -135,7 +140,7 @@ export default class Cart {
             rightScore: 0,
         };
 
-        // get left score
+        // Get left score
         for (let i = 0; i < leftCount.length; i += 1) {
             if (left.length === 0) continue; // avoid dividing by 0
             const x = leftCount[i] / left.length;
@@ -144,10 +149,10 @@ export default class Cart {
 
         gini.leftScore = 1 - score;
 
-        // reset score
+        // Reset score
         score = 0;
 
-        // get right score
+        // Get right score
         for (let i = 0; i < rightCount.length; i += 1) {
             if (right.length === 0) continue;
             const x = rightCount[i] / right.length;
@@ -159,27 +164,28 @@ export default class Cart {
         return (left.length / total) * gini.leftScore + (right.length / total) * gini.rightScore;
     }
 
-    // Counts occurence of classes to make prediction
+    // Creates a leaf node which holds a prediction
     createLeaf(dataset) {
         const classes = dataset.map((d) => d[this.totalFeatures]);
 
+        // The prediction is the class that appears the highest number of times
         const prediction = classes.sort((a, b) => {
             const x = classes.filter((v) => v === a).length;
             const y = classes.filter((v) => v === b).length;
             return x - y;
-            // classes.filter(v => v===a).length - classes.filter(v => v===b).length
         }).pop();
 
         return { prediction };
     }
 
+    // Prints the tree to the console
     printTree(node = this.tree, spacing = '', color = 'green') {
         if ('prediction' in node) {
-            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
+            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:') : chalk.red.bold('+- No:')}`);
             log(`${spacing}+- Prediction: ${node.prediction}`);
             spacing += '   ';
         } else {
-            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:'): chalk.red.bold('+- No:')}`);
+            log(`${spacing}${color === 'green' ? chalk.green.bold('+- Yes:') : chalk.red.bold('+- No:')}`);
             log(`${spacing}+- Is X${node.splitIndex + 1} < ${node.splitValue} ?`);
             spacing += '|  ';
             this.printTree(node.left, spacing, 'green');
@@ -187,12 +193,14 @@ export default class Cart {
         }
     }
 
+    // Returns a set of actual and predicted values
     getPredictions() {
         const predictions = {
             actual: [],
             predicted: [],
         };
 
+        // Loop through each rows class value, retrieving the actual value and predicted one
         Object.values(this.testSet).forEach((row) => {
             const actualValue = row[this.totalFeatures];
             const predictedValue = this.predict(row, this.tree);
@@ -203,8 +211,9 @@ export default class Cart {
         return predictions;
     }
 
+    // Recursively work througn the tree until a leaf node is found and a prediction can be made
     predict(row, node) {
-        // Base case: reached Leaf
+        // Base case: reached Leaf, return its prediction
         if ('prediction' in node) {
             return node.prediction;
         }
@@ -217,6 +226,7 @@ export default class Cart {
         return this.predict(row, node.right);
     }
 
+    // Write each prediction (and actual value) to the file - predictions.txt
     async writePredictionsToFile() {
         const { actual, predicted } = this.getPredictions();
 
@@ -234,7 +244,7 @@ export default class Cart {
         });
     }
 
-    // Returns the accuracy and confusionMatrix
+    // Return the accuracy and confusion matrix of predictions
     getStatistics() {
         const { actual, predicted } = this.getPredictions();
         const numClasses = this.distinctClasses.length;
