@@ -7,7 +7,7 @@ const { log } = console;
 
 export default class Cart {
     constructor({ trainingSet, testSet, distinctClasses }, { maxDepth, minNumSamples }) {
-        // initializse everything and build the tree
+        // initialize everything and build the tree
         this.trainingSet = trainingSet;
         this.testSet = testSet;
         this.distinctClasses = distinctClasses;
@@ -51,6 +51,8 @@ export default class Cart {
                 left: this.createLeaf(leftData),
                 right: this.createLeaf(rightData),
             };
+
+            return node;
         }
 
         // if minimum number of samples is reached on the left, create a leaf...
